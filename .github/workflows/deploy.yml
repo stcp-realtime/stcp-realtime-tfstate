@@ -11,6 +11,49 @@ on:
           - prod
         required: true
 
+permissions:
+  checks: write
+  contents: write
+
 jobs:
   deploy:
     runs-on: ${{ vars.RUNNER }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Checkov Validations
+        id: checkov-validation
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform/
+          output_format: junitxml
+          output_file_path: terraform/checkov-reports
+
+      - name: Generate Checkov PR Report
+        if: always()
+        uses: mikepenz/action-junit-report@v4
+        with:
+          check_name: Checkov Report
+          report_paths: 'terraform/checkov-reports/**.xml'
+
+      - name: Terraform apply
+        uses: ./.github/actions/terraform-apply
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          environment: ${{ inputs.environment }}
+
+      - name: Git Push State Changes
+        env:
+          TERRAFORM_ENV_PATH: terraform/env/${{ inputs.environment }}
+        run: |
+          git config user.email "${{ secrets.TECHNICAL_USER_EMAIL }}"
+          git config user.name "${{ vars.TECHNICAL_USER_NAME }}"
+          git status
+          git add ${{ env.TERRAFORM_ENV_PATH }}/state/*.tfstate || true
+          git add ${{ env.TERRAFORM_ENV_PATH }}/state/*.tfstate.backup || true
+          git add *.hcl || true
+          git diff-index --quiet HEAD || git commit -m "[auto-commit] change in terraform state file"
+          git push origin HEAD:${{ github.ref_name }}
