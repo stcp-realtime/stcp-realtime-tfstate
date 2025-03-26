@@ -1,0 +1,16 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        description: Environment to deploy to
+        options:
+          - dev
+          - prod
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ${{ vars.RUNNER }}
