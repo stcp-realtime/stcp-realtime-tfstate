@@ -39,7 +39,7 @@ jobs:
           report_paths: 'terraform/checkov-reports/**.xml'
 
       - name: Terraform apply
-        uses: ./.github/actions/terraform-apply
+        uses: stcp-realtime/stcp-realtime-shared-github-actions/terraform-apply@master
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
